@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -25,7 +26,7 @@ import (
 )
 
 const (
-	version = "2.0.0"
+	version = "2.1.0"
 	banner  = `
 ╔═══════════════════════════════════════════════╗
 ║       SFO Connectivity Helper v%s          ║
@@ -35,9 +36,10 @@ const (
 )
 
 func main() {
+	// If no arguments, run interactive mode
 	if len(os.Args) < 2 {
-		printUsage()
-		os.Exit(1)
+		runInteractive()
+		return
 	}
 
 	command := os.Args[1]
@@ -57,11 +59,221 @@ func main() {
 		fmt.Printf("sfo-helper version %s\n", version)
 	case "help", "-h", "--help":
 		printUsage()
+		waitForEnter()
 	default:
 		fmt.Printf("Unknown command: %s\n\n", command)
 		printUsage()
-		os.Exit(1)
+		waitForEnter()
 	}
+}
+
+func runInteractive() {
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		fmt.Printf(banner, version)
+		fmt.Println(`
+╔═══════════════════════════════════════════════╗
+║                 MAIN MENU                     ║
+╠═══════════════════════════════════════════════╣
+║  1. Host a Game    (Create session)           ║
+║  2. Join a Game    (Enter join code)          ║
+║  3. Run Server     (Host infrastructure)      ║
+║  4. Diagnostics    (Test connectivity)        ║
+║  5. Exit                                      ║
+╚═══════════════════════════════════════════════╝
+`)
+		fmt.Print("Enter choice (1-5): ")
+
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+
+		switch input {
+		case "1":
+			runInteractiveHost(reader)
+		case "2":
+			runInteractiveJoin(reader)
+		case "3":
+			runInteractiveServer(reader)
+		case "4":
+			runInteractiveDiagnose(reader)
+		case "5":
+			fmt.Println("Goodbye!")
+			return
+		default:
+			fmt.Println("Invalid choice. Press Enter to continue...")
+			reader.ReadString('\n')
+		}
+	}
+}
+
+func runInteractiveHost(reader *bufio.Reader) {
+	fmt.Println("\n═══ HOST A GAME ═══")
+
+	fmt.Print("Signaling server URL [http://localhost:8080]: ")
+	signalURL, _ := reader.ReadString('\n')
+	signalURL = strings.TrimSpace(signalURL)
+	if signalURL == "" {
+		signalURL = "http://localhost:8080"
+	}
+
+	fmt.Print("Relay server address [localhost:8443]: ")
+	relayAddr, _ := reader.ReadString('\n')
+	relayAddr = strings.TrimSpace(relayAddr)
+	if relayAddr == "" {
+		relayAddr = "localhost:8443"
+	}
+
+	fmt.Print("Game target address [127.0.0.1:1626]: ")
+	target, _ := reader.ReadString('\n')
+	target = strings.TrimSpace(target)
+	if target == "" {
+		target = "127.0.0.1:1626"
+	}
+
+	fmt.Print("Skip waiting for game? (y/N): ")
+	skipWait, _ := reader.ReadString('\n')
+	skipWait = strings.TrimSpace(strings.ToLower(skipWait))
+
+	// Build args
+	args := []string{"--signal", signalURL, "--relay", relayAddr, "--target", target}
+	if skipWait == "y" || skipWait == "yes" {
+		args = append(args, "--skip-wait")
+	}
+
+	fmt.Println("\nStarting host mode...")
+	fmt.Println("Press Ctrl+C to stop.\n")
+
+	runHost(args)
+
+	fmt.Println("\nPress Enter to return to menu...")
+	reader.ReadString('\n')
+}
+
+func runInteractiveJoin(reader *bufio.Reader) {
+	fmt.Println("\n═══ JOIN A GAME ═══")
+
+	fmt.Print("Enter join code: ")
+	code, _ := reader.ReadString('\n')
+	code = strings.TrimSpace(code)
+	if code == "" {
+		fmt.Println("No code entered. Press Enter to return...")
+		reader.ReadString('\n')
+		return
+	}
+
+	fmt.Print("Signaling server URL [http://localhost:8080]: ")
+	signalURL, _ := reader.ReadString('\n')
+	signalURL = strings.TrimSpace(signalURL)
+	if signalURL == "" {
+		signalURL = "http://localhost:8080"
+	}
+
+	fmt.Print("Relay server address [localhost:8443]: ")
+	relayAddr, _ := reader.ReadString('\n')
+	relayAddr = strings.TrimSpace(relayAddr)
+	if relayAddr == "" {
+		relayAddr = "localhost:8443"
+	}
+
+	fmt.Print("Game target address [127.0.0.1:1626]: ")
+	target, _ := reader.ReadString('\n')
+	target = strings.TrimSpace(target)
+	if target == "" {
+		target = "127.0.0.1:1626"
+	}
+
+	fmt.Print("Skip waiting for game? (y/N): ")
+	skipWait, _ := reader.ReadString('\n')
+	skipWait = strings.TrimSpace(strings.ToLower(skipWait))
+
+	args := []string{"--code", code, "--signal", signalURL, "--relay", relayAddr, "--target", target}
+	if skipWait == "y" || skipWait == "yes" {
+		args = append(args, "--skip-wait")
+	}
+
+	fmt.Println("\nStarting join mode...")
+	fmt.Println("Press Ctrl+C to stop.\n")
+
+	runJoin(args)
+
+	fmt.Println("\nPress Enter to return to menu...")
+	reader.ReadString('\n')
+}
+
+func runInteractiveServer(reader *bufio.Reader) {
+	fmt.Println("\n═══ RUN SERVER ═══")
+	fmt.Println("This runs both signaling and relay servers.")
+
+	fmt.Print("Secret key for tokens [auto-generate]: ")
+	secret, _ := reader.ReadString('\n')
+	secret = strings.TrimSpace(secret)
+	if secret == "" {
+		secret = fmt.Sprintf("auto-%d", time.Now().UnixNano())
+		fmt.Printf("Generated secret: %s\n", secret)
+	}
+
+	fmt.Print("Signaling port [8080]: ")
+	sigPort, _ := reader.ReadString('\n')
+	sigPort = strings.TrimSpace(sigPort)
+	if sigPort == "" {
+		sigPort = "8080"
+	}
+
+	fmt.Print("Relay port [8443]: ")
+	relayPort, _ := reader.ReadString('\n')
+	relayPort = strings.TrimSpace(relayPort)
+	if relayPort == "" {
+		relayPort = "8443"
+	}
+
+	args := []string{"--secret", secret, "--signaling-port", sigPort, "--relay-port", relayPort}
+
+	fmt.Println("\nStarting servers...")
+	fmt.Println("Press Ctrl+C to stop.\n")
+
+	runServer(args)
+
+	fmt.Println("\nPress Enter to return to menu...")
+	reader.ReadString('\n')
+}
+
+func runInteractiveDiagnose(reader *bufio.Reader) {
+	fmt.Println("\n═══ DIAGNOSTICS ═══")
+
+	fmt.Print("Signaling server URL [http://localhost:8080]: ")
+	signalURL, _ := reader.ReadString('\n')
+	signalURL = strings.TrimSpace(signalURL)
+	if signalURL == "" {
+		signalURL = "http://localhost:8080"
+	}
+
+	fmt.Print("Relay server address [localhost:8443]: ")
+	relayAddr, _ := reader.ReadString('\n')
+	relayAddr = strings.TrimSpace(relayAddr)
+	if relayAddr == "" {
+		relayAddr = "localhost:8443"
+	}
+
+	fmt.Print("Game target address [127.0.0.1:1626]: ")
+	target, _ := reader.ReadString('\n')
+	target = strings.TrimSpace(target)
+	if target == "" {
+		target = "127.0.0.1:1626"
+	}
+
+	args := []string{"--signal", signalURL, "--relay", relayAddr, "--target", target}
+
+	fmt.Println()
+	runDiagnose(args)
+
+	fmt.Println("\nPress Enter to return to menu...")
+	reader.ReadString('\n')
+}
+
+func waitForEnter() {
+	fmt.Println("\nPress Enter to exit...")
+	bufio.NewReader(os.Stdin).ReadString('\n')
 }
 
 func printUsage() {
