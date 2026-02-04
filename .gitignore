@@ -1,0 +1,30 @@
+# OS files
+Thumbs.db
+.DS_Store
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build artifacts (for future use)
+/client/bin/
+/server/bin/
+*.exe
+*.dll
+
+# Environment and secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Logs
+*.log
+logs/
+
+# Dependencies (if using Go modules or npm)
+/vendor/
+/node_modules/
