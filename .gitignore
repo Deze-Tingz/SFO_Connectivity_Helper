@@ -15,9 +15,10 @@ Thumbs.db
 /bin/
 *.exe
 *.dll
-sfo-helper
-signaling
-relay
+# Ignore binary names at root only (not in cmd/ directories)
+/sfo-helper
+/signaling
+/relay
 
 # Environment and secrets
 .env
