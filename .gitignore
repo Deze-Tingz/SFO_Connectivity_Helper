@@ -9,11 +9,15 @@ Thumbs.db
 *.swo
 *~
 
-# Build artifacts (for future use)
+# Build artifacts
 /client/bin/
 /server/bin/
+/bin/
 *.exe
 *.dll
+sfo-helper
+signaling
+relay
 
 # Environment and secrets
 .env
