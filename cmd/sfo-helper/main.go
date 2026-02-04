@@ -76,14 +76,47 @@ func runInteractive() {
 ╔═══════════════════════════════════════════════╗
 ║                 MAIN MENU                     ║
 ╠═══════════════════════════════════════════════╣
-║  1. Host a Game    (Create session)           ║
-║  2. Join a Game    (Enter join code)          ║
-║  3. Run Server     (Host infrastructure)      ║
-║  4. Diagnostics    (Test connectivity)        ║
-║  5. Exit                                      ║
+║  1. Quick Play     (Auto host/join - EASY!)   ║
+║  2. Run Server     (Host infrastructure)      ║
+║  3. Advanced       (Manual host/join/diagnose)║
+║  4. Exit                                      ║
 ╚═══════════════════════════════════════════════╝
 `)
-		fmt.Print("Enter choice (1-5): ")
+		fmt.Print("Enter choice (1-4): ")
+
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+
+		switch input {
+		case "1":
+			runQuickPlay(reader)
+		case "2":
+			runInteractiveServer(reader)
+		case "3":
+			runAdvancedMenu(reader)
+		case "4":
+			fmt.Println("Goodbye!")
+			return
+		default:
+			fmt.Println("Invalid choice. Press Enter to continue...")
+			reader.ReadString('\n')
+		}
+	}
+}
+
+func runAdvancedMenu(reader *bufio.Reader) {
+	for {
+		fmt.Println(`
+╔═══════════════════════════════════════════════╗
+║              ADVANCED OPTIONS                 ║
+╠═══════════════════════════════════════════════╣
+║  1. Host a Game    (Manual setup)             ║
+║  2. Join a Game    (Manual setup)             ║
+║  3. Diagnostics    (Test connectivity)        ║
+║  4. Back to Main Menu                         ║
+╚═══════════════════════════════════════════════╝
+`)
+		fmt.Print("Enter choice (1-4): ")
 
 		input, _ := reader.ReadString('\n')
 		input = strings.TrimSpace(input)
@@ -94,17 +127,63 @@ func runInteractive() {
 		case "2":
 			runInteractiveJoin(reader)
 		case "3":
-			runInteractiveServer(reader)
-		case "4":
 			runInteractiveDiagnose(reader)
-		case "5":
-			fmt.Println("Goodbye!")
+		case "4":
 			return
 		default:
-			fmt.Println("Invalid choice. Press Enter to continue...")
-			reader.ReadString('\n')
+			fmt.Println("Invalid choice.")
 		}
 	}
+}
+
+func runQuickPlay(reader *bufio.Reader) {
+	fmt.Println()
+	fmt.Println("╔═══════════════════════════════════════════════╗")
+	fmt.Println("║              QUICK PLAY                       ║")
+	fmt.Println("╚═══════════════════════════════════════════════╝")
+	fmt.Println()
+	fmt.Println("Make sure Street Fighter Online is running first!")
+	fmt.Println()
+
+	// Get server address (with default)
+	fmt.Print("Server address [localhost]: ")
+	server, _ := reader.ReadString('\n')
+	server = strings.TrimSpace(server)
+	if server == "" {
+		server = "localhost"
+	}
+
+	signalURL := fmt.Sprintf("http://%s:8080", server)
+	relayAddr := fmt.Sprintf("%s:8443", server)
+
+	fmt.Println()
+	fmt.Println("─────────────────────────────────────────────────")
+	fmt.Println("  Enter JOIN CODE from your friend")
+	fmt.Println("  OR press Enter to HOST (create a new code)")
+	fmt.Println("─────────────────────────────────────────────────")
+	fmt.Print("\nJoin code (or Enter to host): ")
+
+	code, _ := reader.ReadString('\n')
+	code = strings.TrimSpace(code)
+
+	args := []string{"--signal", signalURL, "--relay", relayAddr, "--skip-wait"}
+
+	if code == "" {
+		// HOST MODE
+		fmt.Println("\n>>> HOSTING - Creating session...")
+		runHost(args)
+	} else {
+		// JOIN MODE
+		fmt.Println("\n>>> JOINING - Connecting to host...")
+		args = append(args, "--code", code)
+		runJoin(args)
+	}
+
+	fmt.Println("\n══════════════════════════════════════════")
+	fmt.Println("Session ended.")
+	fmt.Println("══════════════════════════════════════════")
+	fmt.Println("\nPress Enter to return to menu...")
+	reader.ReadString('\n')
 }
 
 func runInteractiveHost(reader *bufio.Reader) {
