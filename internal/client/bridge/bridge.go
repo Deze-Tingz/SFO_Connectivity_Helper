@@ -46,24 +46,23 @@ func (s State) String() string {
 
 // Stats tracks connection statistics
 type Stats struct {
-	BytesIn    atomic.Int64
-	BytesOut   atomic.Int64
-	StartTime  time.Time
-	LastError  string
-	RetryCount int
+	BytesIn   atomic.Int64
+	BytesOut  atomic.Int64
+	StartTime time.Time
+	LastError string
 }
 
 // Bridge handles the local game <-> relay connection
 type Bridge struct {
-	mu          sync.RWMutex
-	state       State
-	targetAddr  string
-	relayConn   net.Conn
-	localConn   net.Conn
-	stats       *Stats
+	mu            sync.RWMutex
+	state         State
+	targetAddr    string
+	relayConn     net.Conn
+	localConn     net.Conn
+	stats         *Stats
 	onStateChange func(State)
-	stopCh      chan struct{}
-	wg          sync.WaitGroup
+	stopCh        chan struct{}
+	wg            sync.WaitGroup
 }
 
 // NewBridge creates a new bridge instance
@@ -91,14 +90,8 @@ func (b *Bridge) GetState() State {
 }
 
 // GetStats returns current statistics
-func (b *Bridge) GetStats() Stats {
-	return Stats{
-		BytesIn:    atomic.Int64{},
-		BytesOut:   atomic.Int64{},
-		StartTime:  b.stats.StartTime,
-		LastError:  b.stats.LastError,
-		RetryCount: b.stats.RetryCount,
-	}
+func (b *Bridge) GetStats() *Stats {
+	return b.stats
 }
 
 func (b *Bridge) setState(state State) {
@@ -128,7 +121,7 @@ func (b *Bridge) WaitForGame(timeout time.Duration) error {
 		}
 
 		if time.Now().After(deadline) {
-			return fmt.Errorf("timeout waiting for game to listen on %s", b.targetAddr)
+			return fmt.Errorf("timeout waiting for game on %s", b.targetAddr)
 		}
 
 		if isPortListening(b.targetAddr) {
@@ -144,7 +137,6 @@ func (b *Bridge) WaitForGame(timeout time.Duration) error {
 func (b *Bridge) ConnectRelay(relayConn net.Conn) error {
 	b.setState(StateConnectingRelay)
 
-	// Connect to the local game
 	localConn, err := net.DialTimeout("tcp", b.targetAddr, 5*time.Second)
 	if err != nil {
 		b.stats.LastError = fmt.Sprintf("failed to connect to game: %v", err)
@@ -160,7 +152,6 @@ func (b *Bridge) ConnectRelay(relayConn net.Conn) error {
 	b.setState(StateConnected)
 	b.stats.StartTime = time.Now()
 
-	// Start bidirectional forwarding
 	b.wg.Add(2)
 	go b.forwardToLocal()
 	go b.forwardToRelay()
@@ -237,7 +228,6 @@ func (b *Bridge) Close() {
 
 	select {
 	case <-b.stopCh:
-		// Already closed
 		return
 	default:
 		close(b.stopCh)
@@ -258,7 +248,6 @@ func (b *Bridge) Wait() {
 	b.wg.Wait()
 }
 
-// isPortListening checks if something is listening on the given address
 func isPortListening(addr string) bool {
 	conn, err := net.DialTimeout("tcp", addr, 500*time.Millisecond)
 	if err != nil {
@@ -272,13 +261,7 @@ func isPortListening(addr string) bool {
 func CheckTargetPort(addr string) (bool, error) {
 	conn, err := net.DialTimeout("tcp", addr, 2*time.Second)
 	if err != nil {
-		// Check if it's a connection refused (nothing listening) vs other error
-		if opErr, ok := err.(*net.OpError); ok {
-			if opErr.Op == "dial" {
-				return false, nil // Port not listening, but that's okay
-			}
-		}
-		return false, err
+		return false, nil
 	}
 	conn.Close()
 	return true, nil

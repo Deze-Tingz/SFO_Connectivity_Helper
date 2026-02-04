@@ -123,25 +123,6 @@ func (c *SignalingClient) GetSessionStatus(sessionID string) (*SessionStatus, er
 	return &result, nil
 }
 
-// DeleteSession deletes a session (host only)
-func (c *SignalingClient) DeleteSession(sessionID, hostToken string) error {
-	req, _ := http.NewRequest(http.MethodDelete, c.baseURL+"/session/"+sessionID, nil)
-	req.Header.Set("Authorization", "Bearer "+hostToken)
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to connect to signaling server: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("delete session failed: %s (status %d)", string(body), resp.StatusCode)
-	}
-
-	return nil
-}
-
 // Health checks if the signaling server is reachable
 func (c *SignalingClient) Health() error {
 	resp, err := c.httpClient.Get(c.baseURL + "/health")

@@ -13,7 +13,7 @@ import (
 // TokenClaims represents the claims in a signed token
 type TokenClaims struct {
 	SessionID string `json:"sid"`
-	Role      string `json:"role"` // "host" or "joiner"
+	Role      string `json:"role"`
 	ExpiresAt int64  `json:"exp"`
 }
 
@@ -38,7 +38,6 @@ func (s *Signer) Sign(claims *TokenClaims) (string, error) {
 	mac.Write(payload)
 	signature := mac.Sum(nil)
 
-	// Format: base64(payload).base64(signature)
 	token := base64.RawURLEncoding.EncodeToString(payload) + "." +
 		base64.RawURLEncoding.EncodeToString(signature)
 
@@ -62,7 +61,6 @@ func (s *Signer) Verify(token string) (*TokenClaims, error) {
 		return nil, fmt.Errorf("invalid token signature: %w", err)
 	}
 
-	// Verify signature
 	mac := hmac.New(sha256.New, s.secret)
 	mac.Write(payload)
 	expectedSig := mac.Sum(nil)
@@ -71,13 +69,11 @@ func (s *Signer) Verify(token string) (*TokenClaims, error) {
 		return nil, fmt.Errorf("invalid signature")
 	}
 
-	// Parse claims
 	var claims TokenClaims
 	if err := json.Unmarshal(payload, &claims); err != nil {
 		return nil, fmt.Errorf("invalid claims: %w", err)
 	}
 
-	// Check expiration
 	if time.Now().Unix() > claims.ExpiresAt {
 		return nil, fmt.Errorf("token expired")
 	}

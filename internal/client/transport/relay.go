@@ -52,9 +52,7 @@ func (c *RelayClient) Connect(sessionID, relayToken, role string) error {
 			&net.Dialer{Timeout: 10 * time.Second},
 			"tcp",
 			c.addr,
-			&tls.Config{
-				MinVersion: tls.VersionTLS13,
-			},
+			&tls.Config{MinVersion: tls.VersionTLS13},
 		)
 	} else {
 		conn, err = net.DialTimeout("tcp", c.addr, 10*time.Second)
@@ -64,10 +62,8 @@ func (c *RelayClient) Connect(sessionID, relayToken, role string) error {
 		return fmt.Errorf("failed to connect to relay: %w", err)
 	}
 
-	// Set deadline for auth handshake
 	conn.SetDeadline(time.Now().Add(15 * time.Second))
 
-	// Send auth message
 	authMsg := AuthMessage{
 		SessionID:  sessionID,
 		RelayToken: relayToken,
@@ -81,7 +77,6 @@ func (c *RelayClient) Connect(sessionID, relayToken, role string) error {
 		return fmt.Errorf("failed to send auth message: %w", err)
 	}
 
-	// Read auth response
 	reader := bufio.NewReader(conn)
 	respLine, err := reader.ReadBytes('\n')
 	if err != nil {
@@ -100,7 +95,6 @@ func (c *RelayClient) Connect(sessionID, relayToken, role string) error {
 		return fmt.Errorf("relay authentication failed: %s", authResp.Error)
 	}
 
-	// Clear deadline - the connection is now ready for bidirectional forwarding
 	conn.SetDeadline(time.Time{})
 
 	c.conn = conn
@@ -120,19 +114,6 @@ func (c *RelayClient) Close() error {
 	return nil
 }
 
-// IsConnected returns true if connected to the relay
-func (c *RelayClient) IsConnected() bool {
-	return c.conn != nil
-}
-
-// RemoteAddr returns the remote address of the relay connection
-func (c *RelayClient) RemoteAddr() string {
-	if c.conn != nil {
-		return c.conn.RemoteAddr().String()
-	}
-	return ""
-}
-
 // CheckRelayReachable tests if the relay server is reachable
 func CheckRelayReachable(addr string, useTLS bool) error {
 	var conn net.Conn
@@ -143,9 +124,7 @@ func CheckRelayReachable(addr string, useTLS bool) error {
 			&net.Dialer{Timeout: 5 * time.Second},
 			"tcp",
 			addr,
-			&tls.Config{
-				MinVersion: tls.VersionTLS13,
-			},
+			&tls.Config{MinVersion: tls.VersionTLS13},
 		)
 	} else {
 		conn, err = net.DialTimeout("tcp", addr, 5*time.Second)

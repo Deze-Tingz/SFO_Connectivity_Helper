@@ -22,7 +22,6 @@ type clientLimiter struct {
 }
 
 // NewLimiter creates a new rate limiter
-// rate is requests per second, burst is max burst size
 func NewLimiter(r float64, burst int) *Limiter {
 	l := &Limiter{
 		limiters: make(map[string]*clientLimiter),
@@ -79,8 +78,8 @@ type MultiLimiter struct {
 // NewMultiLimiter creates limiters for create and join operations
 func NewMultiLimiter() *MultiLimiter {
 	return &MultiLimiter{
-		create: NewLimiter(10.0/60.0, 3),  // 10 per minute, burst of 3
-		join:   NewLimiter(30.0/60.0, 10), // 30 per minute, burst of 10
+		create: NewLimiter(10.0/60.0, 3),
+		join:   NewLimiter(30.0/60.0, 10),
 	}
 }
 

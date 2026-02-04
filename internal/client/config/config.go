@@ -9,23 +9,14 @@ import (
 
 // Config holds the client configuration
 type Config struct {
-	// Target address for the game (default: 127.0.0.1:1626)
-	TargetHost string
-	TargetPort int
-
-	// Server addresses
-	SignalingURL string
-	RelayAddr    string
-
-	// Behavior
-	AlwaysRelay bool
-	Debug       bool
-
-	// LISTEN mode (optional)
+	TargetHost      string
+	TargetPort      int
+	SignalingURL    string
+	RelayAddr       string
+	AlwaysRelay     bool
+	Debug           bool
 	LocalListenPort int
-
-	// Bind interface (optional, for multi-NIC systems)
-	BindInterface string
+	BindInterface   string
 }
 
 // DefaultConfig returns the default configuration
@@ -50,19 +41,12 @@ func (c *Config) Validate() error {
 	if c.TargetPort < 1 || c.TargetPort > 65535 {
 		return fmt.Errorf("invalid target port: %d", c.TargetPort)
 	}
-
 	if c.SignalingURL == "" {
 		return fmt.Errorf("signaling URL is required")
 	}
-
 	if c.RelayAddr == "" {
 		return fmt.Errorf("relay address is required")
 	}
-
-	if c.LocalListenPort != 0 && (c.LocalListenPort < 1 || c.LocalListenPort > 65535) {
-		return fmt.Errorf("invalid local listen port: %d", c.LocalListenPort)
-	}
-
 	return nil
 }
 

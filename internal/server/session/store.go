@@ -24,8 +24,8 @@ type Session struct {
 // Store is an in-memory session store with TTL
 type Store struct {
 	mu       sync.RWMutex
-	sessions map[string]*Session // keyed by session ID
-	byCodes  map[string]string   // code -> session ID
+	sessions map[string]*Session
+	byCodes  map[string]string
 	ttl      time.Duration
 }
 
@@ -120,7 +120,6 @@ func (s *Store) Join(code string) (*Session, error) {
 	}
 
 	if session.JoinToken != "" {
-		// Already has a joiner
 		return nil, fmt.Errorf("session already has a joiner")
 	}
 
@@ -210,7 +209,6 @@ func (s *Store) cleanup() {
 	}
 }
 
-// generateID generates a random hex ID
 func generateID(length int) (string, error) {
 	b := make([]byte, length)
 	if _, err := rand.Read(b); err != nil {
@@ -219,16 +217,14 @@ func generateID(length int) (string, error) {
 	return fmt.Sprintf("%x", b), nil
 }
 
-// generateCode generates a 12-char base32 join code (XXXX-XXXX-XXXX)
 func generateCode() (string, error) {
-	b := make([]byte, 8) // 8 bytes = 64 bits, encodes to ~13 base32 chars
+	b := make([]byte, 8)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
 
 	encoded := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(b)
-	encoded = strings.ToUpper(encoded[:12]) // Take first 12 chars
+	encoded = strings.ToUpper(encoded[:12])
 
-	// Format as XXXX-XXXX-XXXX
 	return fmt.Sprintf("%s-%s-%s", encoded[0:4], encoded[4:8], encoded[8:12]), nil
 }
