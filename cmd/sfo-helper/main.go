@@ -109,6 +109,8 @@ func runInteractive() {
 
 func runInteractiveHost(reader *bufio.Reader) {
 	fmt.Println("\n═══ HOST A GAME ═══")
+	fmt.Println("IMPORTANT: Start Street Fighter Online FIRST before continuing!")
+	fmt.Println()
 
 	fmt.Print("Signaling server URL [http://localhost:8080]: ")
 	signalURL, _ := reader.ReadString('\n')
@@ -142,16 +144,25 @@ func runInteractiveHost(reader *bufio.Reader) {
 	}
 
 	fmt.Println("\nStarting host mode...")
-	fmt.Println("Press Ctrl+C to stop.\n")
+	fmt.Println("Keep this window open! Press Ctrl+C to stop.\n")
 
 	runHost(args)
 
+	fmt.Println("\n══════════════════════════════════════════")
+	fmt.Println("Session ended. Possible reasons:")
+	fmt.Println("  - Your friend disconnected")
+	fmt.Println("  - The game was closed")
+	fmt.Println("  - Connection timed out (no joiner within 30 sec)")
+	fmt.Println("  - Server was stopped")
+	fmt.Println("══════════════════════════════════════════")
 	fmt.Println("\nPress Enter to return to menu...")
 	reader.ReadString('\n')
 }
 
 func runInteractiveJoin(reader *bufio.Reader) {
 	fmt.Println("\n═══ JOIN A GAME ═══")
+	fmt.Println("IMPORTANT: Start Street Fighter Online FIRST before continuing!")
+	fmt.Println()
 
 	fmt.Print("Enter join code: ")
 	code, _ := reader.ReadString('\n')
@@ -193,10 +204,17 @@ func runInteractiveJoin(reader *bufio.Reader) {
 	}
 
 	fmt.Println("\nStarting join mode...")
-	fmt.Println("Press Ctrl+C to stop.\n")
+	fmt.Println("Keep this window open! Press Ctrl+C to stop.\n")
 
 	runJoin(args)
 
+	fmt.Println("\n══════════════════════════════════════════")
+	fmt.Println("Session ended. Possible reasons:")
+	fmt.Println("  - Host disconnected")
+	fmt.Println("  - The game was closed")
+	fmt.Println("  - Connection was lost")
+	fmt.Println("  - Server was stopped")
+	fmt.Println("══════════════════════════════════════════")
 	fmt.Println("\nPress Enter to return to menu...")
 	reader.ReadString('\n')
 }
@@ -614,21 +632,29 @@ func runHost(args []string) {
 	fmt.Println("Share this code with your friend.")
 	fmt.Println("Waiting for joiner...")
 
+	fmt.Println("Connecting to relay server...")
 	relayClient := transport.NewRelayClient(cfg.RelayAddr, false)
 	if err := relayClient.Connect(sess.SessionID, sess.RelayToken, "host"); err != nil {
-		log.Fatalf("Failed to connect to relay: %v", err)
+		fmt.Printf("\nERROR: Failed to connect to relay: %v\n", err)
+		fmt.Println("Make sure the server is running and the address is correct.")
+		return
 	}
 	defer relayClient.Close()
 
-	fmt.Println("Connected to relay, waiting for peer...")
+	fmt.Println("Connected to relay! Waiting for your friend to join...")
+	fmt.Println("(They have 30 seconds to enter the code)")
+	fmt.Println()
 
 	if err := br.ConnectRelay(relayClient.GetConn()); err != nil {
-		log.Fatalf("Failed to start bridge: %v", err)
+		fmt.Printf("\nERROR: Failed to connect to game: %v\n", err)
+		fmt.Println("Make sure Street Fighter Online is running!")
+		return
 	}
 
 	fmt.Println()
 	fmt.Println("╔═══════════════════════════════════════════════╗")
-	fmt.Println("║          CONNECTED (RELAYED)                  ║")
+	fmt.Println("║    SUCCESS! CONNECTED (RELAYED)               ║")
+	fmt.Println("║    You can now play! Keep this window open.   ║")
 	fmt.Println("╚═══════════════════════════════════════════════╝")
 	fmt.Println()
 
@@ -642,11 +668,11 @@ func runHost(args []string) {
 
 	select {
 	case <-ctx.Done():
+		fmt.Println("\nYou stopped the session.")
 		br.Close()
 	case <-doneCh:
+		fmt.Println("\nConnection ended.")
 	}
-
-	fmt.Println("Session ended.")
 }
 
 func runJoin(args []string) {
@@ -722,21 +748,27 @@ func runJoin(args []string) {
 
 	fmt.Printf("Joined session %s...\n", sess.SessionID[:8])
 
+	fmt.Println("Connecting to relay server...")
 	relayClient := transport.NewRelayClient(cfg.RelayAddr, false)
 	if err := relayClient.Connect(sess.SessionID, sess.RelayToken, "joiner"); err != nil {
-		log.Fatalf("Failed to connect to relay: %v", err)
+		fmt.Printf("\nERROR: Failed to connect to relay: %v\n", err)
+		fmt.Println("Make sure the server is running and the address is correct.")
+		return
 	}
 	defer relayClient.Close()
 
-	fmt.Println("Connected to relay, connecting to host...")
+	fmt.Println("Connected to relay! Connecting to host...")
 
 	if err := br.ConnectRelay(relayClient.GetConn()); err != nil {
-		log.Fatalf("Failed to start bridge: %v", err)
+		fmt.Printf("\nERROR: Failed to connect to game: %v\n", err)
+		fmt.Println("Make sure Street Fighter Online is running!")
+		return
 	}
 
 	fmt.Println()
 	fmt.Println("╔═══════════════════════════════════════════════╗")
-	fmt.Println("║          CONNECTED (RELAYED)                  ║")
+	fmt.Println("║    SUCCESS! CONNECTED (RELAYED)               ║")
+	fmt.Println("║    You can now play! Keep this window open.   ║")
 	fmt.Println("╚═══════════════════════════════════════════════╝")
 	fmt.Println()
 
@@ -750,11 +782,11 @@ func runJoin(args []string) {
 
 	select {
 	case <-ctx.Done():
+		fmt.Println("\nYou stopped the session.")
 		br.Close()
 	case <-doneCh:
+		fmt.Println("\nConnection ended.")
 	}
-
-	fmt.Println("Session ended.")
 }
 
 func statsLoop(ctx context.Context, br *bridge.Bridge) {
