@@ -15,6 +15,11 @@ Thumbs.db
 /bin/
 *.exe
 *.dll
+
+# Allow game files (tracked by LFS)
+!game/*.exe
+!game/*.dll
+!game/*.ico
 # Ignore binary names at root only (not in cmd/ directories)
 /sfo-helper
 /signaling
