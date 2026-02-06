@@ -2,9 +2,7 @@ package session
 
 import (
 	"crypto/rand"
-	"encoding/base32"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 )
@@ -218,13 +216,17 @@ func generateID(length int) (string, error) {
 }
 
 func generateCode() (string, error) {
-	b := make([]byte, 8)
+	// Generate 4 alphanumeric characters (common letters + numbers)
+	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, 4)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
 
-	encoded := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(b)
-	encoded = strings.ToUpper(encoded[:12])
+	code := make([]byte, 4)
+	for i := 0; i < 4; i++ {
+		code[i] = chars[int(b[i])%len(chars)]
+	}
 
-	return fmt.Sprintf("%s-%s-%s", encoded[0:4], encoded[4:8], encoded[8:12]), nil
+	return fmt.Sprintf("SFO-%s", string(code)), nil
 }

@@ -24,8 +24,8 @@ func DefaultConfig() *Config {
 	return &Config{
 		TargetHost:   "127.0.0.1",
 		TargetPort:   1626,
-		SignalingURL: "http://localhost:8080",
-		RelayAddr:    "localhost:8443",
+		SignalingURL: "http://localhost:1628",
+		RelayAddr:    "localhost:1627",
 		AlwaysRelay:  true,
 		Debug:        false,
 	}
